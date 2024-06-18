@@ -1,0 +1,16 @@
+# Automated Penteration Testing Tool (APTT)
+* Copyright :copyright: 2024
+* Written by: Eng.Ziead Shab Kalieh
+
+
+## Description
+The Automated Penetration Testing Tool (APTT) is a cutting-edge, open-source framework meticulously crafted by Eng.Ziead Shab Kalieh for comprehensive penetration testing automation. APTT empowers security professionals with an arsenal of automated attack vectors, streamlining the process of identifying vulnerabilities and fortifying defenses. With its intuitive interface and robust functionality, APTT facilitates rapid and efficient penetration testing, ensuring organizations stay ahead of emerging cyber threats.
+
+
+
+#### Supported platforms:
+* Linux
+
+### How to Use
+* Hhh it is so easy just run this command using root privillege:
+* sudo python3 aptt

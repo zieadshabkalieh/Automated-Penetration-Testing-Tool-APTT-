@@ -1,0 +1,175 @@
+import os
+import re
+import shutil
+import subprocess
+import sys
+# Py2/3 compatibility
+# Python3 renamed raw_input to input
+try:
+    input = raw_input
+except NameError:
+    pass
+
+# import main core functionality into APTT
+import src.core.apttcore as core
+
+# check which operating system
+operating_system = core.check_os()
+
+if operating_system == "posix":
+    # ROOT CHECK
+    if os.geteuid() != 0:
+        print("\n The Automated Penetration Testing Tool - by Eng.Ziead Shab Kalieh")
+        print("\n Not running as root. \n\nExiting the Automated Penetration Testing Tool..\n")
+        core.exit_set()
+
+# if we are running in the path no need to change
+if os.path.isfile("APTT"):
+    pass
+
+# check where we are and load default directory
+else:
+    print("check the directory is named APTT")
+
+# import after config checks have been properly created
+from src.core.menu import text
+from src.core.update_config import update_config
+
+
+if os.path.isfile(os.path.join(core.userconfigpath, "version.lock")):
+    os.remove(os.path.join(core.userconfigpath, "version.lock"))
+
+# check directory and make it
+if not os.path.isdir("src/logs/"):
+    os.makedirs("src/logs/")
+
+# check aptt logfile
+if not os.path.isfile("src/logs/aptt_logfile.log"):
+    # create new log
+    with open("src/logs/aptt_logfile.log", "w") as filewrite:
+        filewrite.write("")
+
+
+if operating_system == "posix":
+# Checks and creates user configuration directory
+    if not os.path.isdir(core.userconfigpath):
+        # create the aptt variables
+        os.makedirs(core.userconfigpath)
+        # if for some reason it failed to pull the path
+        userdir = os.path.join(os.path.expanduser('~'), '.aptt')
+        if not os.path.isdir(userdir):
+            os.makedirs(userdir)
+if not os.path.isdir(os.path.join(core.userconfigpath, "reports")):
+    os.makedirs(os.path.join(core.userconfigpath, "reports"))
+
+# check to see if we have python3-pycryptodome
+try:
+    from Cryptodome.Cipher import AES
+except ImportError:
+    print("[!] The python3-pycryptodome python module not installed. You will lose the ability to use multi-pyinjector.")
+    pass
+
+update_config()
+
+# chmod routine
+if operating_system == "posix":
+    # change permissions if nix
+    subprocess.Popen("chmod +x seautomate;"
+                     "chmod +x set-update;"
+                     "chmod +x setup.py;"
+                     "chmod +x set-proxy;"
+                     "chmod +x src/payloads/ratte/ratteserver;"
+                     "chmod +x src/payloads/set_payloads/listener.py",
+                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+
+dns = core.check_config("DNS_SERVER=")
+if dns.lower() == "on":
+    import src.core.minifakedns
+    from src.core.apttcore import detect_public_ip
+    src.core.minifakedns.start_dns_server(detect_public_ip())
+
+# remove old files
+for root, dirs, files in os.walk(core.userconfigpath):
+    for f in files:
+        try:
+            match = re.search(".svn|entries|all-wcprops|props|text-base|prop-base|tmp", f)
+            if not match:
+                os.unlink(os.path.join(root, f))
+
+        # if they are being used then ignore
+        except:
+            pass
+    # loop through all the directories
+    for d in dirs:
+        try:
+            match = re.search(".svn|entries|all-wcprops|props|text-base|prop-base|tmp", d)
+            if not match:
+                shutil.rmtree(os.path.join(root, d))
+        except:
+            pass
+
+# if there isn't a aptt_config.py file yet, create one
+if not os.path.isfile("/etc/aptt/aptt_config.py"):
+    update_config()
+
+
+
+# create the aptt.options routine
+with open(os.path.join(core.userconfigpath, "set.options"), "w") as filewrite:
+    filewrite.write("{This is the main APTT configuration file for all options used in APTT}\n")
+
+try:
+    # Remove old Signed_Updates
+    if os.path.isfile(os.path.join(core.userconfigpath, "Signed_Update.jar")):
+        os.remove(os.path.join(core.userconfigpath, "Signed_Update.jar"))
+
+
+    while True:
+        core.show_banner('1')
+        show_main_menu = core.create_menu(text.main_text, text.main_menu)
+
+        # special case of list item 99
+        print('\n  99) Exit the Automated Penetration Testing Tool\n')
+
+        # main core menu
+        main_menu_choice = (input(core.setprompt("0", "")))
+
+        # quit out
+        if main_menu_choice == 'exit' or main_menu_choice == "99" or main_menu_choice == "quit":
+            core.exit_set()
+            # cleans up stale processes from APTT
+            try:
+                # kill anything python running on 80
+                core.kill_proc("80", "python")
+                # kill anything on 443 ruby which is generally a rogue listener
+                core.kill_proc("443", "ruby")
+            except:
+                pass
+
+        # load aptt
+        if main_menu_choice == '1':
+            try:
+                core.module_reload(src.core.aptt)
+            except:
+                import src.core.aptt
+
+        # update aptt
+        if main_menu_choice == '2':
+            core.update_set()
+
+
+        # help
+        if main_menu_choice == '3':
+            core.help_menu()
+
+# handle keyboard interrupts
+except KeyboardInterrupt:
+    print("\n\nThank you for {0}using{1} Automated Penetration Testing Tool.")
+
+# handle exceptions
+except Exception as error:
+    core.log(error)
+    print("\n\n[!] Something went wrong, printing the error: " + str(error))
+
+# cleanup routine
+core.cleanup_routine()
